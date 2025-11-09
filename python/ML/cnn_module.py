@@ -3,7 +3,8 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import pytorch_lightning as pl
 import torchmetrics
-from pytorch_lightning.callbacks import ModelCheckpoint
+
+from ML.mnist_module import MNISTDataModule
 
 
 '''
@@ -11,25 +12,28 @@ from pytorch_lightning.callbacks import ModelCheckpoint
     -32 channel conv, halving maxpool, 20 wide one layer network with leakyReLU activation functions
 '''
 class TinyCNN(nn.Module):
-    def __init__(self, x):
+    def __init__(self):
         
-        # x is (batch, 28, 28) 28x28 grayscale image batch
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=2, stride=2, padding=1)
-        self.pool1 = nn.MaxPool2d(kernel_size=2,stride=2)
-        self.flatten = nn.Flatten()
-        self.linear1 = nn.Linear(in_features=7,out_features=20)
-        self.linear2 = nn.Linear(in_features=20,out_features=20)
-        self.output = nn.Linear(in_features=20, out_features=10)
-        self.leaky_relu = nn.LeakyReLU()
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=2, stride=2, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2,stride=2)
+        )
         
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(in_features=1568,out_features=20),
+            nn.ReLU(),
+            nn.Linear(in_features=20,out_features=20),
+            nn.ReLU(),
+            nn.Linear(in_features=20, out_features=10)
+        )
+           
     def forward(self, x):
-        out = self.conv1(x)
-        out = self.pool1(out)
-        out = self.flatten(out)
-        out = self.leaky_relu(self.linear1(out))
-        out = self.leaky_relu(self.linear2(out))
-        out = self.leaky_relu(self.output(out))
-        return out
+        x = self.features(x)
+        x = self.classifier(x)
+        return x
     
 
 '''
@@ -39,31 +43,45 @@ class TinyCNN(nn.Module):
     - Log information to weights and biases
 '''
 class TinyCnnModule(pl.LightningModule):
-    def __init__(self):
-        self.model = TinyCNN
-        self.loss = nn.CrossEntropyLoss(self.model.parameters())
-        self.accuracy = torchmetrics.Accuracy()
-        
+    def __init__(self, lr):
+        super().__init__()
+        self.model = TinyCNN()
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.accuracy = torchmetrics.Accuracy(task="multiclass", num_classes=10)
+        self.lr = lr        
         
     def training_step(self, batch, batch_idx):
         x, y = batch
         preds = self.model(x)
-        loss = self.loss(preds, y)
+        loss = self.loss_fn(preds, y)
         acc = self.accuracy(preds, y)
-        self.log("train_loss_step", loss)
+        self.log("train_loss_step", loss, prog_bar=True)
         self.log("train_acc_step", acc)
         return loss
         
     def validation_step(self, batch, batch_idx):
         x, y = batch
         preds = self.model(x)
-        loss = self.loss(preds, y)
+        loss = self.loss_fn(preds, y)
         self.log("val_loss_step", loss )
+        self.log("val_loss", loss, prog_bar=True, on_epoch=True)
+        
         return loss
         
+    def configure_optimizers(self):
+        optimizer = AdamW(self.model.parameters(), lr=self.lr)
+        lr_scheduler = CosineAnnealingLR(optimizer, T_max=10)
+        return [optimizer], [lr_scheduler]
         
-    def configure_optimizers(self, optim_params, lrs_params):
-        optimizer = AdamW(optim_params)
-        lr_scheduler = CosineAnnealingLR(lrs_params)
-        return {"optimizer" : optimizer, "lr_scheduler" : lr_scheduler}
-        
+if __name__ == "__main__":
+    model = TinyCnnModule(lr=.001)
+    data = MNISTDataModule()
+    
+    trainer = pl.Trainer(
+        max_epochs = 1,
+        accelerator = "cpu",
+        devices = 1,
+    )
+    
+    trainer.fit(model, datamodule=data)
+    

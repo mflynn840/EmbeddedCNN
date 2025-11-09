@@ -7,9 +7,9 @@ from torch.utils.data import random_split
 
 torch.manual_seed(0)
 
-
 class MNISTDataModule(LightningDataModule):
     def __init__(self, batch_size=64):
+        super().__init__()
         self.batch_size=batch_size
     
     def setup(self, stage):

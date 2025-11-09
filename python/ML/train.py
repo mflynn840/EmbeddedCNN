@@ -1,22 +1,21 @@
 from pytorch_lightning import Trainer
-from cnn_module import TinyCnnModule
-from mnist_module import MNISTDataModule
+from ML.cnn_module import TinyCnnModule
+from ML.mnist_module import MNISTDataModule
 from ray import tune
 from ray.tune.integration.pytorch_lightning import TuneReportCallback
 
-
-
 #launch a single training run
-def train_mnist_tune(config, num_epochs=5, num_gpus=0):
+def train_mnist_tune(config, num_epochs=5):
     model = TinyCnnModule(lr=config["lr"])
     data = MNISTDataModule()
     
-    tune_callback = TuneReportCallback({"val_loss" : "train_loss"}, on="validation_end")
+    tune_callback = TuneReportCallback({"val_loss" : "val_loss_step"}, on="validation_end")
     trainer = Trainer(
         max_epochs = num_epochs,
-        accelerator = "gpu" if num_gpus else "cpu",
-        devices = num_gpus if num_gpus else None,
-        callbacks=[tune_callback]
+        accelerator = "cpu",
+        devices = 1,
+        callbacks=[tune_callback],
+        deterministic=True
     )
     
     trainer.fit(model, datamodule=data)
@@ -37,5 +36,5 @@ if __name__ == "__main__":
         ),
     )
     results = tuner.fit()
-    print("Best conig:", results.get_best_result(metric="val_loss", mode="min0").config)
+    print("Best conig:", results.get_best_result(metric="val_loss", mode="min").config)
     

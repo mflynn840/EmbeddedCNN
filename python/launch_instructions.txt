@@ -1,0 +1,1 @@
+python -m ML.train #train a model
