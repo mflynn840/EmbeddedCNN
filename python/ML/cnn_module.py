@@ -1,4 +1,5 @@
 from torch import nn
+import torch
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import pytorch_lightning as pl
@@ -34,6 +35,14 @@ class TinyCNN(nn.Module):
         x = self.features(x)
         x = self.classifier(x)
         return x
+    
+    @classmethod
+    def from_state_dict(cls, path: str, map_location="cpu"):
+        """Load a TinyCNN from a state_dict"""
+        model = cls()
+        state_dict = torch.load(path, map_location=map_location)
+        model.load_state_dict(state_dict)
+        return model
     
 
 '''

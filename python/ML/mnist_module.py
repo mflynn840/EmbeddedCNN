@@ -12,7 +12,7 @@ class MNISTDataModule(LightningDataModule):
         super().__init__()
         self.batch_size=batch_size
     
-    def setup(self, stage):
+    def setup(self, stage=""):
         
         transform = transform = transforms.Compose([
             transforms.ToTensor(),

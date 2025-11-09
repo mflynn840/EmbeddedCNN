@@ -26,8 +26,8 @@ def apply_pruning(prunable_params):
         prune.remove(module, name)
         
    
-def prune_model(model:torch.nn.Module, amount=0.3):
-    pruned = global_magintude_prune(model, amount=amount)
+def prune_model(model:torch.nn.Module, prune_amount=0.3):
+    pruned = global_magintude_prune(model, amount=prune_amount)
     apply_pruning(pruned)
     
 #usage     

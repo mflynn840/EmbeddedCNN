@@ -1,48 +1,58 @@
 import torch
-from pruning_utils import prune_model
-from quant_utils import quantize_with_neural_compressor
-from tflite_util import onnx_export, onnx_to_tflow, tflow_to_tflite, tflite_to_c_array
-
+from torch.utils.data import DataLoader
+from ML.pruning_utils import prune_model
+from ML.quant_utils import representative_data_gen_from_loader
+from ML.embed_model_utils import onnx_export, onnx_to_tflow, tflow_to_quant_tflite, tflite_to_c_array
+import os
 '''
-    Prepare a SmallCNN and embed it onto the ESP32:
+    Prepare a SmallCNN for embedding:
         -Prune the model with magnitude pruning
         -quantize the model to int8 using Intel Neural Compressor
         -Convert from PyTorch -> ONNX -> TFlite -> C array of int8s
 '''
 
-def model_to_embeddable(model, val_loader, model_name: str, prune_amount=0.3):
+def export_as_embeddable(model: torch.nn.Module, val_loader: DataLoader, model_name="tinycnn", prune_amount=0.3):
     
-    TORCH_PATH = f'./ML/models/torch/{model_name}.torch'
-    ONNX_PATH = f'./ML/models/onnx/{model_name}.onnx'
-    TF_PATH = f'./ML/models/tf/{model_name}.tf'
-    TFLITE_PATH = f'./ML/models/tflite/{model_name}.tflite'
-    C_PATH = f'./ML/models/C/{model_name}.cc'
-    
-    
-    #Step 1: Prune the model
-    prune_model(model, prune_amount=prune_amount)
+    #make paths for all intermediate models
+    ONNX_PATH = f"./ML/models/onnx/{model_name}.onnx"
+    TF_PATH = f"./ML/models/tf/{model_name}"
+    TFLITE_PATH = f"./ML/models/tflite/{model_name}.tflite"
+    C_PATH = f"./ML/models/C/{model_name}.cc"
+    os.makedirs(os.path.dirname(ONNX_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(TF_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(TFLITE_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(C_PATH), exist_ok=True)
 
-    #Step 2: Quantize the model
-    quantize_with_neural_compressor(model, val_loader, outPath=TORCH_PATH)
+    representative_data_gen = representative_data_gen_from_loader(val_loader)
     
-    #Step 3: Convert quantized model to ONNX
-    onnx_export(torch_path=TORCH_PATH, outputPath=ONNX_PATH)
+    # 1. Prune the model
+    print(f'Pruning ({prune_amount*100}% of model model...')
+    prune_model(model, prune_amount=prune_amount)
     
-    #Step 4: Convert to TensorFlow model
+    # 2. Convert to ONNX
+    print(f'Exporting PyTorch float model to ONNX...')
+    onnx_export(model, ONNX_PATH[:-5])
+
+    # 3. Convert to TF
+    print(f'Converting ONNX model to tensorflow float model...')
     onnx_to_tflow(ONNX_PATH, TF_PATH)
-    
-    #Step 5: Convert to Tflite model
-    tflow_to_tflite(TF_PATH, TFLITE_PATH)
-    
-    #Step 5: C int8[] so it can be flashed as binary blob
+
+    # 4. Quantize in TF → TFLite
+    print(f'Converting TFlow float model to quantized int8 tflowlite model...')
+    tflow_to_quant_tflite(TF_PATH, TFLITE_PATH, representative_data_gen)
+
+    # 5. Convert to C array
+    print(f'Convert to an embeddable C array of int8')
     tflite_to_c_array(TFLITE_PATH, C_PATH)
-    
-    
+                      
+                      
 if __name__ == "__main__":
-    from cnn_module import TinyCNN
-    from mnist_module import MNISTDataModule
+    from ML.cnn_module import TinyCNN
+    from ML.mnist_module import MNISTDataModule
     
     model = TinyCNN()
-    val_loader = MNISTDataModule().val_dataloader()
-    model_to_embeddable(model, val_loader, "dummy_model", 0.3)
+    dataset = MNISTDataModule()
+    dataset.setup()
+    val_loader = dataset.val_dataloader()
+    export_as_embeddable(model, val_loader, "dummy_model", 0.3)
     
