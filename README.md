@@ -1,4 +1,4 @@
-This repository contains two projects, a PlatformIO project (ESP32) to run inference and a python backend to train models
+This repository contains two projects, a PlatformIO project (ESP32 flash) to run an inference loop for a TinyCNN classifier trained on MNIST and a python backend to train models
 
 
 PlatformIO:
