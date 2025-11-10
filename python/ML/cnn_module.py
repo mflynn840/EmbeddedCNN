@@ -17,7 +17,7 @@ class TinyCNN(nn.Module):
         
         super().__init__()
         self.features = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=2, stride=2, padding=1),
+            nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2,stride=2)
         )

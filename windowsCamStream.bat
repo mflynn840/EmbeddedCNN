@@ -1,0 +1,1 @@
+ffmpeg -f dshow -rtbufsize 100M -framerate 30 -video_size 1280x720 -i video="USB2.0 HD UVC WebCam" -c:v mjpeg -f mjpeg tcp://0.0.0.0:8080?listen=1

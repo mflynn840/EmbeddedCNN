@@ -31,7 +31,7 @@ def export_as_embeddable(model: torch.nn.Module, val_loader: DataLoader, model_n
     
     # 2. Convert to ONNX
     print(f'Exporting PyTorch float model to ONNX...')
-    onnx_export(model, ONNX_PATH[:-5])
+    onnx_export(model, ONNX_PATH)
 
     # 3. Convert to TF
     print(f'Converting ONNX model to tensorflow float model...')

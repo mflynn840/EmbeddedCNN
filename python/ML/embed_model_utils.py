@@ -1,10 +1,15 @@
 from collections.abc import Iterable
 import torch
 import onnx
-from onnx2tf import convert
 import tensorflow as tf
 import os
-
+from onnx import numpy_helper 
+import numpy as np
+import onnx
+import numpy as np
+from onnx import numpy_helper
+from onnxsim import simplify
+from onnx_tf.backend import prepare
 
 
 def onnx_export(model: torch.nn.Module, output_path: str):
@@ -16,27 +21,41 @@ def onnx_export(model: torch.nn.Module, output_path: str):
     torch.onnx.export(
         model,
         dummy,
-        f'{output_path}.onnx',
+        output_path,
         export_params=True,
-        opset_version=17,
+        opset_version=18,
         do_constant_folding=True,
         input_names=['input'],
         output_names=['output'],
+        keep_initializers_as_inputs=False,
     )
+    
+    # Merge any external data into a single ONNX file
+    if os.path.exists(output_path + ".data"):
+        model_onnx = onnx.load(output_path, load_external_data=True)
+        onnx.save_model(model_onnx, output_path, save_as_external_data=False)
+        os.remove(output_path + ".data")
 
+        
 
 def onnx_to_tflow(onnx_path, output_path):
     '''
         Convert an Onnx TinyCNN to a tensorflow model
     '''
-    onnx_model = onnx.load(onnx_path)
-    convert(
-        onnx_graph=onnx_model,
-        output_folder_path=output_path,
-        copy_onnx_input_output_names_to_tflite=True,
-        non_verbose=True,
-        keep_nchw_or_ncdhw_input_names=True #PyTorch uses NCHW tensors format
-    )
+    if not os.path.exists(onnx_path):
+        raise FileNotFoundError(f"ONNX file not found: {onnx_path}")
+    
+    # Load ONNX model
+    model = onnx.load(onnx_path)
+    
+    # Simiplify the model
+    model, check = simplify(model)
+    if not check:
+        raise RuntimeError("ONNX simplifier failed.")
+    
+    # Convert to TensorFlow
+    tf_rep = prepare(model)
+    tf_rep.export_graph(output_tf_path)
     
 
 def tflow_to_quant_tflite(tflow_path:str, tflite_path:str, representative_data_gen: Iterable):
@@ -70,3 +89,5 @@ def tflite_to_c_array(tflite_path: str, output_path: str, var_name="tflite_model
     with open(output_path, "w") as f:
         f.write(c_code)
     print(f"[INFO] Generated C array at {output_path} ({array_len} bytes)")
+    
+    
