@@ -1,0 +1,15 @@
+# TensorFlow ecosystem
+tensorflow==2.18.1
+tensorflow-addons==0.20.0
+tensorflow-probability==0.21.0
+tensorflow-estimator==2.15.0
+tensorflow-io-gcs-filesystem==0.37.1
+tensorboard==2.18.0
+tensorboard-data-server==0.7.2
+tensorboardX==2.6.4
+keras==3.12.0
+
+# Utilities
+numpy==1.26.4
+scipy==1.16.3
+typing-extensions<4.6.0

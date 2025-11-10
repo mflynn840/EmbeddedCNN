@@ -1,15 +1,4 @@
-
 import torch
-import numpy as np
-
-def representative_data_gen_from_loader(val_loader, num_batches=100):
-    for i, (images, _) in enumerate(val_loader):
-        if i >= num_batches:
-            break
-        # Convert torch.Tensor → numpy array, match TFLite input shape [N, H, W, C]
-        images = images.permute(0, 2, 3, 1).numpy().astype(np.float32)
-        yield [images]
-
 
 #TODO: implement static quantization yourself based on the pytorch tutorial
 class ObservedLinear(torch.nn.Linear):
@@ -22,7 +11,15 @@ class ObservedLinear(torch.nn.Linear):
                  dtype=None):
         super().__init__(in_features, out_features, bias, device, dtype)
 
+import numpy as np
 
+def representative_data_gen_from_loader(val_loader, num_batches=100):
+    for i, (images, _) in enumerate(val_loader):
+        if i >= num_batches:
+            break
+        # Convert torch.Tensor → numpy array, match TFLite input shape [N, H, W, C]
+        images = images.permute(0, 2, 3, 1).numpy().astype(np.float32)
+        yield [images]
 
 
 '''

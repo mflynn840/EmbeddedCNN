@@ -1,9 +1,0 @@
-{
-  "parameters": [
-    {
-      "name": "features.0.weight",
-      "convert_to": "numpy",
-      "transpose": [2, 3, 1, 0]
-    }
-  ]
-}

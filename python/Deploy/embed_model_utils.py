@@ -1,40 +1,11 @@
 from collections.abc import Iterable
-import torch
-import onnx
 import tensorflow as tf
-import os
-from onnx import numpy_helper 
-import numpy as np
 import onnx
-import numpy as np
-from onnx import numpy_helper
 from onnxsim import simplify
 from onnx_tf.backend import prepare
+import os
 
 
-def onnx_export(model: torch.nn.Module, output_path: str):
-    '''
-        Convert a TinyCnn /MNIST model to onnx
-    '''
-    model.eval()
-    dummy = torch.randn(1,1,28,28) #dummy input
-    torch.onnx.export(
-        model,
-        dummy,
-        output_path,
-        export_params=True,
-        opset_version=18,
-        do_constant_folding=True,
-        input_names=['input'],
-        output_names=['output'],
-        keep_initializers_as_inputs=False,
-    )
-    
-    # Merge any external data into a single ONNX file
-    if os.path.exists(output_path + ".data"):
-        model_onnx = onnx.load(output_path, load_external_data=True)
-        onnx.save_model(model_onnx, output_path, save_as_external_data=False)
-        os.remove(output_path + ".data")
 
         
 
