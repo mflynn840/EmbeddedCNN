@@ -8,18 +8,22 @@ TaskHandle_t captureTaskHandle = nullptr;
 
 //Mutex protects shared frame buffer
 SemaphoreHandle_t frameMutex;
+SemaphoreHandle_t frameReadySemaphore;
+
 
 // Shared buffer for inference
 uint8_t shared_frame[FRAME_SIZE];
 
 // Thread 1: capture frames from serial or a camera
 void capture_thread(void* param) {
+
+    
     while(true){
-        if(get_next_frame()) {
+        //wait for a full frame to be ready
+        if (xSemaphoreTake(frameReadySemaphore, portMAX_DELAY) == pdTRUE) {
             //atomically copy the frame data to the shared buffer
             xSemaphoreTake(frameMutex, portMAX_DELAY);
             memcpy(shared_frame, frame_buffer, FRAME_SIZE);
-            frame_ready = true;
             xSemaphoreGive(frameMutex);
         }
     }
@@ -28,17 +32,14 @@ void capture_thread(void* param) {
 // Thread 2: run inference on captured frames
 void inference_thread(void* param) {
     while(true) {
-        bool ready = false;
+        //non-blocking try to consume the frame
+        if (uxSemaphoreGetCount(frameReadySemaphore) > 0) {
+            int8_t result;
+            xSemaphoreTake(frameMutex, portMAX_DELAY);
+            result = run_inference(shared_frame, sizeof(shared_frame));
+            xSemaphoreGive(frameMutex); 
 
-        //atomically consume the frame
-        xSemaphoreTake(frameMutex, portMAX_DELAY);
-        ready = frame_ready;
-        if (frame_ready) frame_ready = false;
-        xSemaphoreGive(frameMutex);
-
-        //write inference result to serial
-        if (ready) {
-            int8_t result = run_inference(shared_frame, sizeof(shared_frame));
+            //Write result to serial
             Serial.print("Inference result: ");
             Serial.println(result);
         }
@@ -62,6 +63,7 @@ void setup() {
 
     //create sychronization semaphore
     frameMutex = xSemaphoreCreateMutex();
+    frameReadySemaphore = xSemaphoreCreateBinary(); //signaling semaphore 
 
     //Start the two demo threads (model inference and frame capture)
     xTaskCreatePinnedToCore(serial_thread_task, "SerialTask", 4096, NULL, 1, NULL, 1);
