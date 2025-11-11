@@ -26,7 +26,7 @@ def onnx_to_tflow(onnx_path, output_path):
     
     # Convert to TensorFlow
     tf_rep = prepare(model)
-    tf_rep.export_graph(output_tf_path)
+    tf_rep.export_graph(output_path)
     
 
 def tflow_to_quant_tflite(tflow_path:str, tflite_path:str, representative_data_gen: Iterable):

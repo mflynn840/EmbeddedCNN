@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision import datasets
 from torch.utils.data import random_split
+import numpy as np
 
 torch.manual_seed(0)
 
@@ -27,3 +28,10 @@ class MNISTDataModule(LightningDataModule):
     
     def val_dataloader(self):
         return DataLoader(self.val_set, self.batch_size)
+    
+if __name__ == "__main__":
+    data_module = MNISTDataModule()
+    data_module.setup()
+    train_loader = data_module.train_dataloader()
+    val_loader = data_module.val_dataloader()
+    
