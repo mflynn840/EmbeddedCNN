@@ -3,7 +3,9 @@ This repository contains two projects, a PlatformIO project (ESP32 flash) to run
 
 PlatformIO:
 -load tensorflow-lite-micro library, inference loop, and capture loop onto ESP32
--main.cpp runs the main event loops for CNN classifier and frame reciever
+-main.cpp runs the main event loops for CNN classifier and frame reciever.
+
+They write to a shared buffer, threading coordination is handled with mutex
 
 
 Python:
