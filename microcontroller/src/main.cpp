@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "get_frams.h"
+#include "get_frames.h"
 #include "ml.h"
 
 TaskHandle_t inferenceTaskHandle = nullptr;
@@ -69,7 +69,7 @@ void setup() {
 }
 
 void loop() {
-    vtaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 

@@ -1,4 +1,15 @@
 #include "get_frames.h"
+#include <Arduino.h>
+
+extern volatile bool frame_ready;
+
+bool get_next_frame() {
+  if (frame_ready) {
+    frame_ready = false;
+    return true;
+  }
+  return false;
+}
 
 uint8_t frame_buffer[28 * 28];
 volatile bool frame_ready = false;
