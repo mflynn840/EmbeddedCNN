@@ -1,0 +1,2 @@
+This is intended to store embedded tflite models as a C array
+-Stage tflite for flash embedding 
