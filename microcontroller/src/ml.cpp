@@ -1,5 +1,5 @@
 #include "ml.h"
-#include "model_data.cc"  // embedded model (int8[])
+#include "./models/model.cc"  // embedded model (int8[])
 
 
 // allocate the tensor arena
@@ -16,7 +16,8 @@ static TfLiteTensor* output = nullptr;
 void init_model() {
 
     Serial.println("Loading embedded Model...");
-    const tflite::Model* model = tflite::GetModel(model_data);
+
+    const tflite::Model* model = tflite::GetModel(tflite_model);
     if (model->version() != TFLITE_SCHEMA_VERSION) {
     Serial.println("Model schema mismatch!");
     return;
@@ -24,17 +25,24 @@ void init_model() {
 
     // Resolve layers
     static tflite::AllOpsResolver resolver;
+    tflite::ErrorReporter* error_reporter = nullptr;
+
+    // Micro allocator using tensor arena
+    static tflite::MicroAllocator* allocator = 
+      tflite::MicroAllocator::Create(tensor_arena, kTensorArenaSize, error_reporter);
+
+    // Use the allocator based interpreter constructor
     static tflite::MicroInterpreter static_interpreter(
-        model, resolver, tensor_arena, kTensorArenaSize);
+        model, resolver, allocator, error_reporter);
+
+
     interpreter = &static_interpreter;
 
-    // Load weights
     if (interpreter->AllocateTensors() != kTfLiteOk) {
-    Serial.println("Failed to allocate tensors!");
-    return;
+      Serial.println("Failed to allocate tensors!");
+      return;
     }
 
-    // Assign input and output tensors
     input = interpreter->input(0);
     output = interpreter->output(0);
 

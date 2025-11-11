@@ -1,28 +1,35 @@
 #include "get_frames.h"
 #include <Arduino.h>
 
-extern volatile bool frame_ready;
+uint8_t frame_buffer[FRAME_SIZE];      
+volatile bool frame_ready = false;     
 
+
+// Returns true if a full frame is ready
 bool get_next_frame() {
-  if (frame_ready) {
-    frame_ready = false;
-    return true;
-  }
-  return false;
+    if (frame_ready) {
+        frame_ready = false;
+        return true;
+    }
+    return false;
 }
 
-uint8_t frame_buffer[28 * 28];
-volatile bool frame_ready = false;
-
+// Read bytes from serial into frame_buffer
 void serial_thread_task(void* param) {
+  static uint16_t index = 0; // current write position in frame_buffer
+
   while (true) {
-    if (Serial.available() >= 28 * 28) {
-      for (int i = 0; i < 28 * 28; i++) {
-        frame_buffer[i] = Serial.read();
+    while (Serial.available() > 0) {
+      uint8_t byte = Serial.read();
+      frame_buffer[index++] = byte;
+
+      // Check if a full frame is received
+      if (index >= FRAME_SIZE) {
+        frame_ready = true;  // mark frame ready
+        index = 0;           // reset for next frame
+        Serial.println("Frame received");
       }
-      frame_ready = true;
-      Serial.println("Frame received");
     }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(1 / portTICK_PERIOD_MS); // small delay to yield
   }
 }
