@@ -1,14 +1,10 @@
-#download raspery pi os lite
-#extract the image file
-#extract the device tree and kernel from the image files last 2 partitions
 
-import cv2 #NOTE you have to uninstall neural_compressor and cv headless as they shadow opencv gui
-import serial
+import cv2 #NOTE uninstall neural_compressor and cv headless as they shadow opencv gui
 import time
 
 
 def overlayNumber(img, number):
-    # overlay big red number
+    # overlay classification label
     font = cv2.FONT_HERSHEY_SIMPLEX
     font_scale = 6          # adjust size
     thickness = 8           # thickness of the strokes
